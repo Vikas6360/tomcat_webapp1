@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deploying Web App with Tomcat</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --card: #151e2e;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --code-bg: #0d1117;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 64px;
+    animation: fadeDown 0.6s ease;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 24px;
+    letter-spacing: 0.05em;
+  }
+
+  .header-badge .dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 30%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .header-sub {
+    color: var(--muted);
+    font-size: 1.05rem;
+    font-weight: 400;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Tech stack pills */
+  .tech-stack {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 32px 0 0;
+  }
+
+  .tech-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .tech-pill:hover { transform: translateY(-2px); }
+
+  .pill-java    { background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.3); color: #fb923c; }
+  .pill-maven   { background: rgba(124,58,237,0.1); border-color: rgba(124,58,237,0.3); color: #a78bfa; }
+  .pill-github  { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15); color: #e2e8f0; }
+  .pill-aws     { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); color: #fbbf24; }
+  .pill-tomcat  { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171; }
+  .pill-linux   { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #34d399; }
+
+  /* Workflow pipeline */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 48px 0 16px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .pipe-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 90px;
+  }
+
+  .pipe-icon {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    transition: transform 0.2s;
+  }
+
+  .pipe-icon:hover { transform: scale(1.1); }
+
+  .pipe-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+
+  .pipe-arrow {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    min-width: 20px;
+    position: relative;
+    margin-bottom: 22px;
+  }
+
+  .pipe-arrow::after {
+    content: '';
+    position: absolute;
+    right: -4px; top: -3px;
+    border: 4px solid transparent;
+    border-left: 6px solid var(--accent3);
+  }
+
+  /* Sections */
+  .section {
+    margin-bottom: 32px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .section:nth-child(1) { animation-delay: 0.1s; }
+  .section:nth-child(2) { animation-delay: 0.2s; }
+  .section:nth-child(3) { animation-delay: 0.3s; }
+  .section:nth-child(4) { animation-delay: 0.4s; }
+  .section:nth-child(5) { animation-delay: 0.5s; }
+  .section:nth-child(6) { animation-delay: 0.6s; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 14px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    cursor: pointer;
+    transition: background 0.2s;
+    user-select: none;
+  }
+
+  .section-header:hover { background: #1a2540; }
+
+  .step-num {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    flex: 1;
+  }
+
+  .section-icon {
+    font-size: 18px;
+  }
+
+  .toggle-btn {
+    font-size: 18px;
+    color: var(--muted);
+    transition: transform 0.3s;
+  }
+
+  .section.open .toggle-btn {
+    transform: rotate(180deg);
+  }
+
+  .section-body {
+    display: none;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+  }
+
+  .section.open .section-body { display: block; }
+
+  /* Command blocks */
+  .cmd-block {
+    margin-bottom: 16px;
+  }
+
+  .cmd-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .cmd {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #e2e8f0;
+    position: relative;
+    overflow-x: auto;
+    line-height: 1.6;
+    white-space: pre;
+  }
+
+  .cmd .prompt { color: var(--green); user-select: none; }
+  .cmd .comment { color: var(--muted); }
+  .cmd .flag { color: var(--accent); }
+  .cmd .path { color: var(--yellow); }
+  .cmd .keyword { color: #c084fc; }
+
+  .copy-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    transition: background 0.2s;
+  }
+
+  .copy-btn:hover { background: rgba(0,212,255,0.2); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); background: rgba(16,185,129,0.1); }
+
+  /* XML config blocks */
+  .xml-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .xml-tag { color: #7dd3fc; }
+  .xml-attr { color: #fca5a5; }
+  .xml-val { color: #86efac; }
+  .xml-comment { color: var(--muted); font-style: italic; }
+
+  /* Info note */
+  .note {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    margin: 14px 0;
+    line-height: 1.5;
+  }
+
+  .note-info { background: rgba(0,212,255,0.07); border: 1px solid rgba(0,212,255,0.2); color: #bae6fd; }
+  .note-warn { background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.2); color: #fde68a; }
+  .note-success { background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.2); color: #a7f3d0; }
+
+  .note-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  .desc {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .footer span { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge"><span class="dot"></span> DevOps Workflow</div>
+    <h1>Deploying Web App<br>with Apache Tomcat</h1>
+    <p class="header-sub">End-to-end deployment guide — Maven project to live server on AWS EC2</p>
+
+    <div class="tech-stack">
+      <div class="tech-pill pill-java">☕ Java</div>
+      <div class="tech-pill pill-maven">🏗️ Maven</div>
+      <div class="tech-pill pill-github">🐙 GitHub</div>
+      <div class="tech-pill pill-aws">☁️ AWS EC2</div>
+      <div class="tech-pill pill-tomcat">🐱 Tomcat 9</div>
+      <div class="tech-pill pill-linux">🐧 Ubuntu Linux</div>
+    </div>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-icon">🏗️</div>
+      <div class="pipe-label">Maven Build</div>
+    </div>
+    <div class="pipe-arrow"></div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🐙</div>
+      <div class="pipe-label">GitHub Push</div>
+    </div>
+    <div class="pipe-arrow"></div>
+    <div class="pipe-step">
+      <div class="pipe-icon">☁️</div>
+      <div class="pipe-label">EC2 Launch</div>
+    </div>
+    <div class="pipe-arrow"></div>
+    <div class="pipe-step">
+      <div class="pipe-icon">⚙️</div>
+      <div class="pipe-label">Java + Maven</div>
+    </div>
+    <div class="pipe-arrow"></div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🐱</div>
+      <div class="pipe-label">Tomcat Setup</div>
+    </div>
+    <div class="pipe-arrow"></div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🚀</div>
+      <div class="pipe-label">Deploy</div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="section open">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="step-num">1</div>
+      <div class="section-title">Create Maven Web Project (Local)</div>
+      <span class="section-icon">🏗️</span>
+      <span class="toggle-btn">▾</span>
+    </div>
+    <div class="section-body">
+      <p class="desc">Create a new Maven web project and push it to GitHub from your local machine.</p>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Create Maven project</div>
+        <div class="cmd"><span class="prompt">$ </span>mvn archetype:generate <span class="flag">\
+  -DgroupId=</span>com.yourname.app <span class="flag">\
+  -DartifactId=</span>mywebapp <span class="flag">\
+  -DarchetypeArtifactId=</span>maven-archetype-webapp <span class="flag">\
+  -DinteractiveMode=</span>false</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Push to GitHub</div>
+        <div class="cmd"><span class="prompt">$ </span>cd mywebapp
+<span class="prompt">$ </span>git init
+<span class="prompt">$ </span>git add .
+<span class="prompt">$ </span>git commit <span class="flag">-m</span> <span class="xml-val">"initial commit"</span>
+<span class="prompt">$ </span>git remote add origin https://github.com/yourusername/mywebapp.git
+<span class="prompt">$ </span>git push <span class="flag">-u</span> origin main</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="step-num">2</div>
+      <div class="section-title">Launch EC2 Instance on AWS</div>
+      <span class="section-icon">☁️</span>
+      <span class="toggle-btn">▾</span>
+    </div>
+    <div class="section-body">
+      <p class="desc">Set up your AWS EC2 Ubuntu instance and configure the Security Group.</p>
+
+      <div class="note note-info">
+        <span class="note-icon">ℹ️</span>
+        <span>Launch EC2 → Ubuntu 22.04 LTS → t2.micro (free tier). Create or use existing key pair (.pem file).</span>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Security Group Rules — Add Inbound Rules</div>
+        <div class="cmd"><span class="comment"># Rule 1: SSH</span>
+Type: SSH | Port: 22 | Source: Anywhere IPv4
+
+<span class="comment"># Rule 2: All Traffic (for app access)</span>
+Type: All traffic | Port: All | Source: Anywhere IPv4
+
+<span class="comment"># Rule 3: Custom TCP (Tomcat port)</span>
+Type: Custom TCP | Port: 8080 | Source: Anywhere IPv4</div>
+      </div>
+
+      <div class="note note-warn">
+        <span class="note-icon">⚠️</span>
+        <span>For production, restrict inbound rules to specific IPs. "Anywhere IPv4" is for learning/testing only.</span>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Connect via MobaXterm / SSH</div>
+        <div class="cmd"><span class="prompt">$ </span>ssh <span class="flag">-i</span> <span class="path">your-key.pem</span> ubuntu@&lt;EC2-PUBLIC-IP&gt;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="step-num">3</div>
+      <div class="section-title">Install Java &amp; Maven on EC2</div>
+      <span class="section-icon">⚙️</span>
+      <span class="toggle-btn">▾</span>
+    </div>
+    <div class="section-body">
+      <p class="desc">Update the server and install Java (OpenJDK 17) and Apache Maven.</p>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Update &amp; Install Java</div>
+        <div class="cmd"><span class="prompt">$ </span>sudo su -
+<span class="prompt">$ </span>apt update           <span class="comment">  # update machine packages</span>
+<span class="prompt">$ </span>apt install openjdk-17-jre-headless <span class="flag">-y</span>  <span class="comment"># install java</span></div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Download &amp; Install Maven</div>
+        <div class="cmd"><span class="prompt">$ </span>wget https://dlcdn.apache.org/maven/maven-3/3.9.14/binaries/apache-maven-3.9.14-bin.tar.gz
+
+<span class="comment"># Extract the archive</span>
+<span class="prompt">$ </span>tar <span class="flag">-zxvf</span> apache-maven-3.9.14-bin.tar.gz
+
+<span class="comment"># Remove the archive file</span>
+<span class="prompt">$ </span>rm <span class="flag">-rf</span> apache-maven-3.9.14-bin.tar.gz
+
+<span class="comment"># Rename and move to /root/maven</span>
+<span class="prompt">$ </span>mv apache-maven-3.9.14 maven</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Set Maven in PATH (only once)</div>
+        <div class="cmd"><span class="prompt">$ </span>echo <span class="xml-val">"export PATH=/root/maven/bin:$PATH"</span> >> ~/.bashrc
+<span class="prompt">$ </span>source ~/.bashrc
+
+<span class="comment"># Verify Maven installation</span>
+<span class="prompt">$ </span>mvn <span class="flag">--version</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="step-num">4</div>
+      <div class="section-title">Install &amp; Configure Apache Tomcat 9</div>
+      <span class="section-icon">🐱</span>
+      <span class="toggle-btn">▾</span>
+    </div>
+    <div class="section-body">
+      <p class="desc">Download Tomcat 9, extract it, and configure user credentials for the Manager App.</p>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Download &amp; Extract Tomcat</div>
+        <div class="cmd"><span class="prompt">$ </span>wget (curl address) https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.115/bin/apache-tomcat-9.0.115.tar.gz
+
+<span class="prompt">$ </span>tar <span class="flag">-zxvf</span> apache-tomcat-9.0.115.tar.gz
+
+<span class="prompt">$ </span>rm <span class="flag">-rf</span> apache-tomcat-9.0.115.tar.gz</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Configure Tomcat Users</div>
+        <div class="cmd"><span class="prompt">$ </span>vi apache-tomcat-9.0.115/conf/tomcat-users.xml</div>
+        <div class="xml-block"><span class="xml-comment">&lt;!-- Insert before &lt;/tomcat-users&gt; --&gt;</span>
+
+<span class="xml-tag">&lt;role</span> <span class="xml-attr">rolename=</span><span class="xml-val">"manager-gui"</span><span class="xml-tag">/&gt;</span>
+<span class="xml-tag">&lt;role</span> <span class="xml-attr">rolename=</span><span class="xml-val">"manager-script"</span><span class="xml-tag">/&gt;</span>
+<span class="xml-tag">&lt;role</span> <span class="xml-attr">rolename=</span><span class="xml-val">"manager-jmx"</span><span class="xml-tag">/&gt;</span>
+<span class="xml-tag">&lt;role</span> <span class="xml-attr">rolename=</span><span class="xml-val">"manager-status"</span><span class="xml-tag">/&gt;</span>
+<span class="xml-tag">&lt;user</span> <span class="xml-attr">username=</span><span class="xml-val">"admin"</span> <span class="xml-attr">password=</span><span class="xml-val">"admin"</span>
+  <span class="xml-attr">roles=</span><span class="xml-val">"manager-gui,manager-script,manager-jmx,manager-status"</span><span class="xml-tag">/&gt;</span>
+
+<span class="xml-comment">&lt;!-- Save: Esc then :wq --&gt;</span></div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Enable Remote Access to Manager App</div>
+        <div class="cmd"><span class="prompt">$ </span>vi apache-tomcat-9.0.115/webapps/manager/META-INF/context.xml</div>
+        <div class="xml-block"><span class="xml-comment">&lt;!-- Comment out the Valve (add &lt;!-- before and --&gt; after) --&gt;</span>
+
+<span class="xml-comment">&lt;!--
+  &lt;Valve className="org.apache.catalina.valves.RemoteAddrValve"
+    allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" /&gt;
+--&gt;</span>
+
+<span class="xml-comment">&lt;!-- Save: Esc then :wq --&gt;</span></div>
+      </div>
+
+      <div class="note note-info">
+        <span class="note-icon">ℹ️</span>
+        <span>Commenting out the RemoteAddrValve allows access to the Manager App from any IP, not just localhost.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="step-num">5</div>
+      <div class="section-title">Clone Project &amp; Build WAR File</div>
+      <span class="section-icon">🐙</span>
+      <span class="toggle-btn">▾</span>
+    </div>
+    <div class="section-body">
+      <p class="desc">Clone your GitHub repo on the EC2 instance and build the WAR file with Maven.</p>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Clone from GitHub</div>
+        <div class="cmd"><span class="prompt">$ </span>git clone https://github.com/yourusername/mywebapp.git
+<span class="prompt">$ </span>cd mywebapp</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Build the project (generates .war)</div>
+        <div class="cmd"><span class="prompt">$ </span>mvn clean package   <span class="comment"># or: mvn clean install</span>
+
+<span class="comment"># WAR file will be at:</span>
+<span class="path">target/mywebapp.war</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="step-num">6</div>
+      <div class="section-title">Deploy WAR to Tomcat &amp; Launch</div>
+      <span class="section-icon">🚀</span>
+      <span class="toggle-btn">▾</span>
+    </div>
+    <div class="section-body">
+      <p class="desc">Copy the WAR to Tomcat's webapps directory, start the server, and access your app.</p>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Copy WAR file to Tomcat webapps</div>
+        <div class="cmd"><span class="prompt">$ </span>cp <span class="path">target/mywebapp.war</span> apache-tomcat-9.0.115/webapps/
+<span class="comment"># ls apache-tomcat-9.0.115/webapps/ to verify</span></div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Start Tomcat Server</div>
+        <div class="cmd"><span class="prompt">$ </span>sh apache-tomcat-9.0.115/bin/startup.sh</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Access the App in Browser</div>
+        <div class="cmd"><span class="comment"># Copy EC2 IPv4 Public IP from AWS console</span>
+http://&lt;EC2-PUBLIC-IP&gt;:8080
+
+<span class="comment"># Manager App (login: admin / admin)</span>
+http://&lt;EC2-PUBLIC-IP&gt;:8080/manager
+
+<span class="comment"># Your deployed webapp</span>
+http://&lt;EC2-PUBLIC-IP&gt;:8080/mywebapp</div>
+      </div>
+
+      <div class="note note-success">
+        <span class="note-icon">✅</span>
+        <span>Your web app is now live! Open the Manager App, login with admin/admin, and you'll see your deployed application listed.</span>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Stop Tomcat Server (when needed)</div>
+        <div class="cmd"><span class="prompt">$ </span>sh apache-tomcat-9.0.115/bin/shutdown.sh</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Built for <span>Vikas</span> · Java Full Stack + DevOps · VTU 8th Sem
+  </div>
+
+</div>
+
+<script>
+  function toggle(header) {
+    const section = header.parentElement;
+    section.classList.toggle('open');
+  }
+
+  // Copy button logic
+  document.querySelectorAll('.cmd').forEach(block => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'copy';
+    btn.onclick = () => {
+      const text = block.innerText.replace(/^\$ /gm, '').replace(/^copy$/m, '').trim();
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    };
+    block.appendChild(btn);
+  });
+</script>
+</body>
+</html>
