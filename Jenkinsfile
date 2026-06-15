@@ -27,10 +27,10 @@ pipeline {
                     sh '''
                     pkill -f "tomcat_webapp1" || true
 
-                    JAR_FILE=$(find target -name "*.jar" | head -1)
+                    JAR_FILE=$(find target -name "*.war" | head -1)
 
                     if [ -z "$JAR_FILE" ]; then
-                      echo "No jar file found"
+                      echo "No jar file found. Build generated WAR file instead of JAR." > deploy.log
                       exit 1
                     fi
 
