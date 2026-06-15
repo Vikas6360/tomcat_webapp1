@@ -34,7 +34,7 @@ pipeline {
                       exit 1
                     fi
 
-                    nohup java -jar "$JAR_FILE" > app.log 2>&1 &
+                    nohup java -jar "$JAR_FILE" > deploy.log 2>&1 &
 
                     sleep 20
                     '''
@@ -85,9 +85,12 @@ Status: Application is running successfully."
                 def appLogs = ""
 
                 try {
-                    appLogs = currentBuild.rawBuild.getLog(100).join('\n')
+                    appLogs = sh(
+                        script: "cat deploy.log 2>/dev/null || echo 'deploy.log not found'",
+                        returnStdout: true
+                    ).trim()
                 } catch (Exception e) {
-                    appLogs = "Unable to read Jenkins console logs"
+                    appLogs = "Unable to read deploy logs"
                 }
 
                 writeFile(
