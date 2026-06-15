@@ -25,7 +25,8 @@ pipeline {
                     env.FAILED_STAGE = "Deploy"
 
                     sh '''
-                    pkill -f "book-my-ticket" || true
+                    pkill -f "tomcat_webapp1
+" || true
 
                     JAR_FILE=$(find target -name "*.jar" | head -1)
 
@@ -98,7 +99,7 @@ Status: Application is running successfully."
                     text: """
 DEPLOYMENT FAILED
 
-Project : Book-My-Ticket
+Project : tomcat_webapp1
 Build   : #${env.BUILD_NUMBER}
 Stage   : ${env.FAILED_STAGE}
 
@@ -109,8 +110,8 @@ ${appLogs}
                 )
 
                 withCredentials([
-                    string(credentialsId: 'telegram-token', variable: 'TOKEN'),
-                    string(credentialsId: 'telegram-chat-id', variable: 'CHAT_ID')
+                    string(credentialsId: 'Telegram_token', variable: 'TOKEN'),
+                    string(credentialsId: 'Telegram_id', variable: 'CHAT_ID')
                 ]) {
 
                     sh '''
@@ -119,7 +120,7 @@ ${appLogs}
                     -d chat_id="${CHAT_ID}" \
                     -d text="❌ Deployment Failed
 
-Project: Book-My-Ticket
+Project: tomcat_webapp1
 Build: #${BUILD_NUMBER}
 Stage: ${FAILED_STAGE}
 
