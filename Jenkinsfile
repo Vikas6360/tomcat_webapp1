@@ -25,8 +25,7 @@ pipeline {
                     env.FAILED_STAGE = "Deploy"
 
                     sh '''
-                    pkill -f "tomcat_webapp1
-" || true
+                    pkill -f "tomcat_webapp1" || true
 
                     JAR_FILE=$(find target -name "*.jar" | head -1)
 
@@ -71,7 +70,7 @@ pipeline {
                 -d chat_id="${CHAT_ID}" \
                 -d text="✅ DEPLOYMENT SUCCESS
 
-Project: Book-My-Ticket
+Project: tomcat_webapp1
 Build: #${BUILD_NUMBER}
 Node: ${NODE_NAME}
 Status: Application is running successfully."
@@ -86,12 +85,9 @@ Status: Application is running successfully."
                 def appLogs = ""
 
                 try {
-                    appLogs = sh(
-                        script: "tail -50 app.log 2>/dev/null || echo 'app.log not found'",
-                        returnStdout: true
-                    ).trim()
+                    appLogs = currentBuild.rawBuild.getLog(100).join('\n')
                 } catch (Exception e) {
-                    appLogs = "Unable to read application logs"
+                    appLogs = "Unable to read Jenkins console logs"
                 }
 
                 writeFile(
